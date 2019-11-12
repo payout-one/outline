@@ -90,4 +90,3 @@ jobs:
           command: |
             echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
             docker push payout1/$CIRCLE_PROJECT_REPONAME:v0.37.0.$CIRCLE_BUILD_NUM
-      - opsgenie/notify

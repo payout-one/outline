@@ -38,3 +38,56 @@ jobs:
       - run:
           name: flow
           command: yarn flow
+      - restore_cache:
+          keys:
+            - v2-{{ .Branch }}
+          paths:
+            - caches/$CIRCLE_PROJECT_REPONAME.tar
+      - run:
+          name: Load Docker image layer cache
+          command: |
+            set +o pipefail
+            docker load -i caches/$CIRCLE_PROJECT_REPONAME.tar | true
+      - run:
+          name: Build Docker image
+          command: |
+            echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
+            docker build -f Dockerfile.production --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') --build-arg BUILD_VERSION=v0.37.0.$CIRCLE_BUILD_NUM --build-arg HEX_KEY=$HEX_KEY -t payout1/$CIRCLE_PROJECT_REPONAME:v0.37.0.$CIRCLE_BUILD_NUM .
+      - restore_cache:
+          keys:
+            - v2-clair
+          paths:
+            - caches/clair.tar
+      - run:
+          name: Load Clair image layer cache
+          command: |
+            set +o pipefail
+            docker load -i caches/clair.tar | true
+      - run:
+          name: Clair Docker containers vulnerability scan
+          command: ./payout_clair.sh payout1/$CIRCLE_PROJECT_REPONAME:v0.37.0.$CIRCLE_BUILD_NUM
+      - run:
+          name: Save Clair Docker Image
+          command: |
+            mkdir -p caches
+            docker save -o caches/clair.tar arminc/clair-db:latest
+      - save_cache:
+          key: v2-clair-{{ epoch }}
+          paths:
+            - caches/$CIRCLE_PROJECT_REPONAME.tar
+      - run:
+          name: Save Docker image layer cache
+          command: |
+            mkdir -p caches
+            docker tag payout1/$CIRCLE_PROJECT_REPONAME:v0.37.0.$CIRCLE_BUILD_NUM payout1/$CIRCLE_PROJECT_REPONAME:latest
+            docker save -o caches/$CIRCLE_PROJECT_REPONAME.tar payout1/$CIRCLE_PROJECT_REPONAME:v0.37.0.$CIRCLE_BUILD_NUM
+      - save_cache:
+          key: v2-{{ .Branch }}-{{ epoch }}
+          paths:
+            - caches/$CIRCLE_PROJECT_REPONAME.tar
+      - deploy:
+          name: Push to DockerHub
+          command: |
+            echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
+            docker push payout1/$CIRCLE_PROJECT_REPONAME:v0.37.0.$CIRCLE_BUILD_NUM
+      - opsgenie/notify

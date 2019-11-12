@@ -13,3 +13,9 @@ RUN cp -r /opt/outline/node_modules /opt/node_modules
 RUN yarn build:webpack
 
 EXPOSE 3000
+
+
+ARG BUILD_DATE
+
+LABEL org.opencontainers.image.created=$BUILD_DATE
+LABEL org.label-schema.build-date=$BUILD_DATE

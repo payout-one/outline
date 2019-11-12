@@ -1,7 +1,5 @@
 FROM node:12-alpine
 
-RUN apk update && apk upgrade
-
 ENV PATH /opt/outline/node_modules/.bin:/opt/node_modules/.bin:$PATH
 ENV NODE_PATH /opt/outline/node_modules:/opt/node_modules
 ENV APP_PATH /opt/outline
